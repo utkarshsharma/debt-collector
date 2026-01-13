@@ -40,6 +40,8 @@
 - [x] Configure development environment
 - [x] Set up Docker Compose for local dev
 - [x] Create shared Python package structure (13 tests passing)
+- [x] Create factory classes for mock data generation (10 tests passing)
+- [x] Create seed script for test data (scripts/seed_data.py)
 
 ### Phase 2: Voice Orchestrator MVP
 - [ ] Implement Twilio Media Streams WebSocket handler
@@ -110,3 +112,6 @@
   - Created monorepo folder structure
   - Created shared Python package with Pydantic schemas (13 tests passing)
   - Set up Docker Compose (PostgreSQL, Redis, service definitions)
+  - Created factory classes for mock data generation (10 tests passing)
+  - Created seed script (scripts/seed_data.py) for 10-20 mock debtors
+  - Total: 23 tests passing

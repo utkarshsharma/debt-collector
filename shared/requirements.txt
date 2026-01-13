@@ -1,0 +1,5 @@
+# Shared package dependencies
+pydantic>=2.0.0
+pytest>=7.0.0
+factory-boy>=3.3.0
+python-dateutil>=2.8.0
