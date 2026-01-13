@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: debt-collector-postgres
+    environment:
+      POSTGRES_USER: debt_collector
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: debt_collector
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U debt_collector"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for sessions and caching
+  redis:
+    image: redis:7-alpine
+    container_name: debt-collector-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Client API Service
+  client-api:
+    build:
+      context: ./services/client-api
+      dockerfile: Dockerfile
+    container_name: debt-collector-client-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://debt_collector:dev_password@postgres:5432/debt_collector
+      REDIS_URL: redis://redis:6379/0
+      ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/client-api/src:/app/src
+      - ./shared:/app/shared
+    profiles:
+      - services
+
+  # Voice Orchestrator Service
+  voice-orchestrator:
+    build:
+      context: ./services/voice-orchestrator
+      dockerfile: Dockerfile
+    container_name: debt-collector-voice-orchestrator
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://debt_collector:dev_password@postgres:5432/debt_collector
+      REDIS_URL: redis://redis:6379/0
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/voice-orchestrator/src:/app/src
+      - ./shared:/app/shared
+    profiles:
+      - services
+
+  # Call Scheduler Service
+  call-scheduler:
+    build:
+      context: ./services/call-scheduler
+      dockerfile: Dockerfile
+    container_name: debt-collector-call-scheduler
+    environment:
+      DATABASE_URL: postgresql://debt_collector:dev_password@postgres:5432/debt_collector
+      REDIS_URL: redis://redis:6379/0
+      ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/call-scheduler/src:/app/src
+      - ./shared:/app/shared
+    profiles:
+      - services
+
+volumes:
+  postgres_data:
+  redis_data:
