@@ -37,8 +37,8 @@
 ### Phase 1: Project Setup
 - [x] Initialize monorepo structure
 - [ ] Set up GCP project
-- [ ] Configure development environment
-- [ ] Set up Docker Compose for local dev
+- [x] Configure development environment
+- [x] Set up Docker Compose for local dev
 - [x] Create shared Python package structure (13 tests passing)
 
 ### Phase 2: Voice Orchestrator MVP
@@ -106,3 +106,7 @@
 - Data model designed
 - API designed
 - Prompts designed
+- Started implementation:
+  - Created monorepo folder structure
+  - Created shared Python package with Pydantic schemas (13 tests passing)
+  - Set up Docker Compose (PostgreSQL, Redis, service definitions)
