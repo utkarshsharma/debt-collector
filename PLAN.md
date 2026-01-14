@@ -1,6 +1,6 @@
 # Debt Collector Voice AI - System Plan
 
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-14
 
 ---
 
@@ -18,6 +18,7 @@ Voice AI system for personal finance companies to collect debt across three stag
 | Component | Choice | Why |
 |-----------|--------|-----|
 | **Telephony** | Twilio | Best docs, largest ecosystem |
+| **SMS** | Twilio SMS API | Same provider, unified billing |
 | **Speech-to-Text** | Deepgram | Lowest latency (~100ms), streaming |
 | **LLM** | GPT-5-mini | Fast, cost-effective |
 | **Text-to-Speech** | ElevenLabs | Most natural voice |
@@ -131,6 +132,41 @@ Debtor → Twilio → Server → Deepgram (STT) → GPT-5 (LLM) → ElevenLabs (
 | ElevenLabs TTS | 200ms |
 | Buffer | 250ms |
 | **Total** | **<1000ms** |
+
+---
+
+## SMS Messaging
+
+### Architecture
+```
+Voice:  ElevenLabs Agent ←→ Twilio Phone
+SMS:    Your Code ←→ Twilio SMS API (direct)
+```
+
+### Use Cases
+1. **Payment Reminders** - Send before/after calls
+2. **Promise Confirmations** - "You committed to pay €X by [date]"
+3. **Follow-ups** - Reminder before promise date
+4. **Missed Call Notifications** - "We tried to reach you..."
+
+### Message Templates
+- Same `{{variable}}` syntax as voice prompts
+- Templates: reminder, confirmation, follow-up, missed_call
+
+### Files
+```
+shared/
+├── twilio_sms/
+│   ├── __init__.py      # Client initialization
+│   └── messages.py      # send_sms() function
+├── schemas/
+│   └── sms.py           # SMSMessage, SMSResponse
+└── prompts/
+    └── sms_templates.py # Message templates
+
+scripts/
+└── test_sms.py          # Test script (mirrors test_call.py)
+```
 
 ---
 
