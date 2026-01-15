@@ -10,8 +10,8 @@ from typing import Any
 
 from openai import OpenAI
 
-from ..prompts.extraction import EXTRACTION_PROMPT
-from ..schemas.call import CallExtraction
+from prompts.extraction import EXTRACTION_PROMPT
+from schemas.call import CallExtraction
 
 
 # Lazy initialization

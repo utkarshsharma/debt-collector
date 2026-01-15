@@ -82,3 +82,23 @@ class CallState(str, Enum):
     WRONG_NUMBER = "wrong_number"
     HARDSHIP = "hardship"
     CALLBACK = "callback"
+
+
+class SMSStatus(str, Enum):
+    """Status of an SMS message."""
+
+    QUEUED = "queued"
+    SENDING = "sending"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    UNDELIVERED = "undelivered"
+
+
+class SMSType(str, Enum):
+    """Type/purpose of an SMS message."""
+
+    REMINDER = "reminder"
+    CONFIRMATION = "confirmation"
+    FOLLOW_UP = "follow_up"
+    MISSED_CALL = "missed_call"

@@ -1,13 +1,13 @@
 # Debt Collector Voice AI - Task Tracker
 
-**Last Updated**: 2026-01-14
+**Last Updated**: 2026-01-15
 
 ---
 
 ## Current Status
 
-**Phase**: Phase 2.5 (SMS Messaging)
-**Next Action**: Implement SMS sending capability
+**Phase**: Phase 2.5 (SMS Messaging) - Configured, Pending Verification
+**Next Action**: Verify SMS tool works during live call, then Phase 3 (Client API)
 
 ---
 
@@ -52,13 +52,17 @@
 - [x] Add skip-verification flag for testing
 - [x] Create stage-specific prompts (pre/early/late delinquency)
 
-### Phase 2.5: SMS Messaging
-- [ ] Add Twilio SDK dependency
-- [ ] Create twilio_sms module (client + messages)
-- [ ] Add SMS schemas (SMSMessage, SMSResponse)
-- [ ] Create SMS templates (reminder, confirmation, follow-up)
-- [ ] Build test_sms.py script
-- [ ] Test end-to-end SMS sending
+### Phase 2.5: SMS Messaging (Post-Call via ElevenLabs Agent)
+- [x] Add Twilio SDK dependency
+- [x] Create twilio_sms module (client + messages)
+- [x] Add SMS schemas (SMSMessage, SMSResponse)
+- [x] Create SMS templates (reminder, confirmation, follow-up)
+- [x] Configure ElevenLabs Auth Connection for Twilio (Basic Auth)
+- [x] Create SMS webhook tool with auth_connection
+- [x] Update agent prompt with mandatory SMS instructions
+- [x] Add end_call built-in tool to agent
+- [x] Create add_sms_tool_to_agent.py setup script
+- [ ] Verify SMS tool works during live call (ElevenLabs simulation API unavailable)
 
 ### Phase 3: Client API Service
 - [ ] Set up FastAPI project structure
@@ -102,7 +106,8 @@
 | Service | Purpose | Status |
 |---------|---------|--------|
 | ElevenLabs Agent | Voice AI (STT + LLM + TTS) | Working |
-| twilio_sms | SMS messaging | Planned |
+| SMS Tool (Agent) | Post-call SMS via Twilio | Configured, pending verification |
+| twilio_sms module | SMS messaging (standalone) | Complete (19 tests) |
 | client-api | REST API for finance companies | Not started |
 | call-scheduler | Background job processing | Not started |
 
@@ -110,7 +115,29 @@
 
 ## Session Log
 
-### 2026-01-14
+### 2026-01-15 (Session 3)
+- Implemented post-call SMS via ElevenLabs Agent webhook tool
+- Created ElevenLabs Auth Connection for Twilio (Basic Auth)
+- Updated SMS tool to use auth_connection instead of manual headers
+- Updated debt_collection.py prompts with MANDATORY SMS instructions
+- Added end_call built-in tool so agent can disconnect calls
+- Refactored add_sms_tool_to_agent.py to use auth connections
+- Discovered ElevenLabs simulate_conversation API returns 500 (cannot test without live call)
+- Moved test scripts to scripts/local_testing/ (git-ignored)
+- Direct Twilio API calls verified working
+
+### 2026-01-14 (Session 2)
+- Implemented complete SMS messaging module (Phase 2.5)
+- Added Twilio SDK dependency to requirements.txt
+- Created SMS enums (SMSStatus, SMSType) in enums.py
+- Created SMS schemas (SMSMessage, SMSResponse, SMSTemplateContext)
+- Built twilio_sms module with lazy client initialization
+- Implemented send_sms() and send_sms_from_template() functions
+- Created 12 SMS templates (reminder, confirmation, follow-up, missed call)
+- Built test_sms.py script (mirrors test_call.py pattern)
+- Added 19 unit tests for SMS module (42 total tests now)
+
+### 2026-01-14 (Session 1)
 - Pivoted from custom voice orchestrator to ElevenLabs Agents Platform
 - Set up ElevenLabs SDK and created debt collection agent (GPT-5.2)
 - Linked Twilio phone number (+3197010225408) to ElevenLabs agent

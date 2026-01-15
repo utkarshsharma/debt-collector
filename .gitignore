@@ -69,3 +69,9 @@ Thumbs.db
 recordings/
 temp/
 tmp/
+
+# Local testing scripts (not for version control)
+scripts/local_testing/
+
+# Voice samples (generated locally)
+voice_samples/

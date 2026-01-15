@@ -9,6 +9,7 @@ import os
 from typing import Any
 
 from . import get_client
+from .tools import create_sms_tool
 from ..prompts.debt_collection import get_system_prompt, DelinquencyStage
 
 
@@ -32,6 +33,7 @@ def create_debt_collection_agent(
     voice_id: str | None = None,
     llm_model: str = "gpt-5.2",
     max_call_duration_seconds: int = 600,
+    enable_sms_tool: bool = True,
 ) -> dict[str, Any]:
     """
     Create a new ElevenLabs agent for debt collection.
@@ -42,12 +44,13 @@ def create_debt_collection_agent(
         voice_id: ElevenLabs voice ID (uses env var if not provided)
         llm_model: LLM model to use (default: gpt-5.2)
         max_call_duration_seconds: Max call duration (default: 10 minutes)
+        enable_sms_tool: Whether to enable the SMS confirmation tool (default: True)
 
     Returns:
         Agent creation response with agent_id and configuration
 
     Raises:
-        ValueError: If voice_id is not set
+        ValueError: If voice_id is not set, or if enable_sms_tool=True but Twilio creds missing
     """
     client = get_client()
 
@@ -63,10 +66,23 @@ def create_debt_collection_agent(
     # Get the stage-specific system prompt
     system_prompt = get_system_prompt(stage)
 
+    # Build tools list
+    tools = []
+    if enable_sms_tool:
+        try:
+            sms_tool = create_sms_tool()
+            tools.append(sms_tool)
+        except ValueError as e:
+            raise ValueError(
+                f"SMS tool enabled but Twilio credentials missing: {e}. "
+                "Set TWILIO_ACCOUNT_SID and TWILIO_SMS_NUMBER env vars, "
+                "or pass enable_sms_tool=False to disable."
+            )
+
     # Create the agent
-    response = client.conversational_ai.agents.create(
-        name=name,
-        conversation_config={
+    create_kwargs = {
+        "name": name,
+        "conversation_config": {
             "agent": {
                 "first_message": FIRST_MESSAGE,
                 "language": "en",
@@ -94,11 +110,17 @@ def create_debt_collection_agent(
                 "turn_timeout": 7,
             },
         },
-        platform_settings={
+        "platform_settings": {
             "auth": {"enable_auth": False},
             "call_limits": {"max_call_duration_seconds": max_call_duration_seconds},
         },
-    )
+    }
+
+    # Add tools if any are configured
+    if tools:
+        create_kwargs["tools"] = tools
+
+    response = client.conversational_ai.agents.create(**create_kwargs)
 
     return response
 

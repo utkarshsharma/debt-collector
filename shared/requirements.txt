@@ -10,3 +10,9 @@ elevenlabs>=1.0.0
 
 # OpenAI (for post-call extraction with GPT-5.2)
 openai>=1.0.0
+
+# Twilio (SMS messaging)
+twilio>=8.0.0
+
+# Pretty console output
+rich>=13.0.0
