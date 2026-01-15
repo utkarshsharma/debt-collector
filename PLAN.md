@@ -1,6 +1,6 @@
 # Debt Collector Voice AI - System Plan
 
-**Last Updated**: 2026-01-14
+**Last Updated**: 2026-01-15
 
 ---
 
@@ -17,11 +17,10 @@ Voice AI system for personal finance companies to collect debt across three stag
 
 | Component | Choice | Why |
 |-----------|--------|-----|
-| **Telephony** | Twilio | Best docs, largest ecosystem |
-| **SMS** | Twilio SMS API | Same provider, unified billing |
-| **Speech-to-Text** | Deepgram | Lowest latency (~100ms), streaming |
-| **LLM** | GPT-5-mini | Fast, cost-effective |
-| **Text-to-Speech** | ElevenLabs | Most natural voice |
+| **Voice AI Platform** | ElevenLabs Agents | All-in-one: STT + LLM + TTS + call handling |
+| **Telephony** | Twilio (via ElevenLabs) | Phone number linked to ElevenLabs agent |
+| **SMS** | Twilio SMS API | Agent webhook tool calls Twilio directly |
+| **LLM** | GPT-5.2 (via ElevenLabs) | Configured in ElevenLabs agent |
 | **Backend** | Python/FastAPI | AI/ML ecosystem, async support |
 | **Cloud** | GCP | Better AI/ML services |
 | **Database** | Cloud SQL (PostgreSQL) | Relational, JSONB support |
@@ -29,49 +28,74 @@ Voice AI system for personal finance companies to collect debt across three stag
 | **Queue** | Cloud Pub/Sub | Reliable async messaging |
 | **Storage** | Cloud Storage (GCS) | Call recordings |
 
-### Estimated Cost Per Call (~3 min)
-- Twilio: $0.042
-- Deepgram: $0.013
-- GPT-5-mini: ~$0.01
-- ElevenLabs: $0.15
-- **Total: ~$0.22/call**
+### Architecture Pivot (2026-01-14)
+Originally planned custom voice orchestrator with separate STT/LLM/TTS integration.
+Pivoted to **ElevenLabs Agents Platform** which handles:
+- Twilio phone integration
+- Speech-to-text (built-in)
+- LLM conversation (GPT-5.2)
+- Text-to-speech (ElevenLabs voices)
+- Interruption handling
+- Call state management
 
-At 1,000 calls/day = ~$6,600/month
+### Estimated Cost Per Call (~3 min)
+- ElevenLabs Agent: ~$0.20 (includes STT, LLM, TTS)
+- Twilio telephony: $0.042
+- Twilio SMS: $0.0079
+- **Total: ~$0.25/call**
+
+At 1,000 calls/day = ~$7,500/month
 
 ---
 
 ## Architecture
 
-### Microservices Design
+### Simplified Design (ElevenLabs Agents)
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  CLIENT API     │    │     VOICE       │    │  CALL SCHEDULER │
-│  SERVICE        │    │  ORCHESTRATOR   │    │     SERVICE     │
-│                 │    │                 │    │                 │
-│ • Debtor CRUD   │    │ • Twilio WS     │    │ • Job queue     │
-│ • Campaign CRUD │    │ • Deepgram STT  │    │ • TCPA hours    │
-│ • Call history  │    │ • GPT-5 LLM     │    │ • Retry logic   │
-│                 │    │ • ElevenLabs TTS│    │                 │
-│ Cloud Run       │    │ Cloud Run       │    │ Cloud Run Jobs  │
-└────────┬────────┘    └────────┬────────┘    └────────┬────────┘
-         │                      │                      │
-         └──────────────────────┼──────────────────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │    Cloud Pub/Sub      │
-                    │                       │
-                    │ • call.schedule       │
-                    │ • call.completed      │
-                    │ • call.failed         │
-                    │ • webhook.send        │
-                    └───────────────────────┘
-                                │
-         ┌──────────────────────┼──────────────────────┐
-         │                      │                      │
-    Cloud SQL              Memorystore           Cloud Storage
-   (PostgreSQL)             (Redis)                 (GCS)
+┌─────────────────┐    ┌─────────────────────────────────────┐    ┌─────────────────┐
+│  CLIENT API     │    │         ELEVENLABS AGENT            │    │  CALL SCHEDULER │
+│  SERVICE        │    │                                     │    │     SERVICE     │
+│                 │    │  ┌─────────────────────────────┐    │    │                 │
+│ • Debtor CRUD   │    │  │  Debt Collection Agent      │    │    │ • Job queue     │
+│ • Campaign CRUD │    │  │  • GPT-5.2 LLM              │    │    │ • TCPA hours    │
+│ • Call history  │    │  │  • Built-in STT/TTS         │    │    │ • Retry logic   │
+│                 │    │  │  • Twilio phone linked      │    │    │                 │
+│ Cloud Run       │    │  │  • send_sms webhook tool    │    │    │ Cloud Run Jobs  │
+│                 │    │  │  • end_call system tool     │    │    │                 │
+└────────┬────────┘    │  └──────────────┬──────────────┘    │    └────────┬────────┘
+         │             │                 │                    │             │
+         │             │                 │ (SMS webhook)      │             │
+         │             │                 ▼                    │             │
+         │             │         Twilio SMS API              │             │
+         │             └─────────────────────────────────────┘             │
+         │                                                                 │
+         └─────────────────────────┬───────────────────────────────────────┘
+                                   │
+                       ┌───────────▼───────────┐
+                       │    Cloud Pub/Sub      │
+                       │                       │
+                       │ • call.schedule       │
+                       │ • call.completed      │
+                       │ • call.failed         │
+                       │ • webhook.send        │
+                       └───────────────────────┘
+                                   │
+            ┌──────────────────────┼──────────────────────┐
+            │                      │                      │
+       Cloud SQL              Memorystore           Cloud Storage
+      (PostgreSQL)             (Redis)                 (GCS)
 ```
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| **ElevenLabs Agent** | Handles entire voice conversation (STT→LLM→TTS) |
+| **Twilio Phone** | Linked to agent, handles inbound/outbound calls |
+| **SMS Webhook Tool** | Agent calls Twilio SMS API directly during calls |
+| **Auth Connection** | Twilio Basic Auth stored securely in ElevenLabs |
+| **end_call Tool** | Agent terminates calls automatically when done |
 
 ### Repository Structure
 
@@ -111,61 +135,82 @@ debt-collector/
 
 ---
 
-## Real-Time Voice Loop
+## Voice Call Flow
 
-### Connection Type
-- **WebSocket-based** (Twilio Media Streams)
-- **Interruption handling**: Stop immediately when debtor speaks
-
-### Call Flow
+### ElevenLabs Agent Handles Everything
 
 ```
-Debtor → Twilio → Server → Deepgram (STT) → GPT-5 (LLM) → ElevenLabs (TTS) → Twilio → Debtor
+Debtor ←→ Twilio Phone ←→ ElevenLabs Agent (STT + GPT-5.2 + TTS)
+                                    │
+                                    ├── send_sms tool → Twilio SMS API
+                                    └── end_call tool → Terminate call
 ```
 
-### Latency Budget (Target: <1 second)
-| Stage | Target |
-|-------|--------|
-| Network | 50ms |
-| Deepgram STT | 200ms |
-| GPT-5-mini | 300ms |
-| ElevenLabs TTS | 200ms |
-| Buffer | 250ms |
-| **Total** | **<1000ms** |
+### Agent Configuration
+- **Voice**: ElevenLabs voice (configurable)
+- **LLM**: GPT-5.2 (via ElevenLabs)
+- **Prompts**: Stage-specific (pre/early/late delinquency)
+- **Tools**: send_sms webhook, end_call system tool
+- **Dynamic Variables**: debtor_name, company_name, amount_owed, due_date, account_number
+
+### Latency
+Handled by ElevenLabs platform - optimized for real-time conversation with built-in interruption handling.
 
 ---
 
 ## SMS Messaging
 
-### Architecture
+### Architecture (Agent-Initiated)
 ```
-Voice:  ElevenLabs Agent ←→ Twilio Phone
-SMS:    Your Code ←→ Twilio SMS API (direct)
+ElevenLabs Agent → send_sms webhook tool → Twilio SMS API → Debtor
 ```
 
-### Use Cases
-1. **Payment Reminders** - Send before/after calls
-2. **Promise Confirmations** - "You committed to pay €X by [date]"
-3. **Follow-ups** - Reminder before promise date
-4. **Missed Call Notifications** - "We tried to reach you..."
+The agent sends SMS **during the call** before ending, based on conversation outcome.
 
-### Message Templates
-- Same `{{variable}}` syntax as voice prompts
-- Templates: reminder, confirmation, follow-up, missed_call
+### When SMS is Sent
+| Outcome | SMS Content |
+|---------|-------------|
+| Payment commitment | "Confirms your commitment to pay $X by [date]" |
+| Callback scheduled | "We'll call you back as discussed" |
+| Dispute raised | "We've noted your concern, team will follow up" |
+| Hardship claimed | "Contact info for payment options" |
+| General follow-up | "Thank you for speaking with us" |
+
+### When SMS is NOT Sent
+- Wrong number confirmed
+- Third party answered (not the debtor)
+- Debtor explicitly opted out
+
+### Agent Tool Configuration
+```python
+# SMS webhook tool uses ElevenLabs Auth Connection
+{
+    "type": "webhook",
+    "name": "send_sms",
+    "api_schema": {
+        "url": "https://api.twilio.com/.../Messages.json",
+        "method": "POST",
+        "auth_connection": {"auth_connection_id": "..."}
+    }
+}
+```
 
 ### Files
 ```
 shared/
 ├── twilio_sms/
-│   ├── __init__.py      # Client initialization
+│   ├── __init__.py      # Client initialization (for standalone use)
 │   └── messages.py      # send_sms() function
+├── elevenlabs_integration/
+│   └── tools.py         # SMS tool configuration
 ├── schemas/
 │   └── sms.py           # SMSMessage, SMSResponse
 └── prompts/
-    └── sms_templates.py # Message templates
+    ├── debt_collection.py  # Includes SMS instructions
+    └── sms_templates.py    # Message templates
 
 scripts/
-└── test_sms.py          # Test script (mirrors test_call.py)
+└── add_sms_tool_to_agent.py  # Configure agent with SMS tool
 ```
 
 ---
@@ -249,35 +294,39 @@ GREETING → VERIFICATION → PURPOSE → NEGOTIATION → COMMITMENT → CLOSING
 
 ## Implementation Phases
 
-### Phase 1: Project Setup
+### Phase 1: Project Setup ✅
 - Monorepo structure
-- GCP project
 - Docker Compose for local dev
+- Shared Python package with schemas
 
-### Phase 2: Voice Orchestrator MVP
-- Twilio WebSocket
-- Deepgram streaming
-- GPT-5 conversation
-- ElevenLabs TTS
-- State machine
-- Single call test
+### Phase 2: Voice Agent (ElevenLabs) ✅
+- ElevenLabs Agent created with GPT-5.2
+- Twilio phone number linked to agent
+- Stage-specific prompts (pre/early/late delinquency)
+- Test calls working (NL + India)
 
-### Phase 3: Client API
+### Phase 2.5: SMS Messaging ✅ (Pending Verification)
+- SMS webhook tool configured with Auth Connection
+- Agent prompts include mandatory SMS instructions
+- end_call system tool enabled
+- **Status**: Configured, needs live call verification
+
+### Phase 3: Client API (Not Started)
 - FastAPI + SQLAlchemy
 - All CRUD endpoints
 - Authentication
 
-### Phase 4: Call Scheduler
+### Phase 4: Call Scheduler (Not Started)
 - Cloud Pub/Sub integration
 - TCPA compliance
 - Retry logic
 
-### Phase 5: Integration
+### Phase 5: Integration (Not Started)
 - Connect services
 - Webhooks
 - Testing
 
-### Phase 6: Deployment
+### Phase 6: Deployment (Not Started)
 - Dockerfiles
 - Cloud Run
 - Monitoring
@@ -286,9 +335,11 @@ GREETING → VERIFICATION → PURPOSE → NEGOTIATION → COMMITMENT → CLOSING
 
 ## Open Questions
 
-1. ~~Technology stack~~ → Decided
+1. ~~Technology stack~~ → Decided (ElevenLabs Agents + Twilio)
 2. ~~Monolith vs microservices~~ → Microservices
 3. ~~Data model~~ → Complete
 4. ~~API design~~ → Complete
+5. ~~Voice orchestration approach~~ → ElevenLabs Agents (not custom)
+6. ~~SMS approach~~ → Agent webhook tool (not separate service)
 
-**All planning complete. Ready to build.**
+**Voice + SMS configured. Next: Client API (Phase 3).**
