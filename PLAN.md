@@ -1,6 +1,6 @@
 # Debt Collector Voice AI - System Plan
 
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-17
 
 ---
 
@@ -23,7 +23,7 @@ Voice AI system for personal finance companies to collect debt across three stag
 | **LLM** | GPT-5.2 (via ElevenLabs) | Configured in ElevenLabs agent |
 | **Backend** | Python/FastAPI | AI/ML ecosystem, async support |
 | **Cloud** | GCP | Better AI/ML services |
-| **Database** | Cloud SQL (PostgreSQL) | Relational, JSONB support |
+| **Database** | Supabase (PostgreSQL) | Managed PostgreSQL, JSONB support |
 | **Cache** | Memorystore (Redis) | Sessions, rate limiting |
 | **Queue** | Cloud Pub/Sub | Reliable async messaging |
 | **Storage** | Cloud Storage (GCS) | Call recordings |
@@ -195,6 +195,17 @@ The agent sends SMS **during the call** before ending, based on conversation out
 }
 ```
 
+### No-Call Test (Simulate Conversation)
+Test that the agent attempts the `send_sms` tool call without placing any phone calls:
+```bash
+python scripts/local_testing/simulate_sms_tool.py --to +15551234567 --body "Test SMS from simulation"
+```
+
+To actually send the SMS via Twilio (use a test number):
+```bash
+python scripts/local_testing/simulate_sms_tool.py --to +15551234567 --body "Real SMS from simulation" --real
+```
+
 ### Files
 ```
 shared/
@@ -311,10 +322,13 @@ GREETING → VERIFICATION → PURPOSE → NEGOTIATION → COMMITMENT → CLOSING
 - end_call system tool enabled
 - **Status**: Configured, needs live call verification
 
-### Phase 3: Client API (Not Started)
-- FastAPI + SQLAlchemy
-- All CRUD endpoints
-- Authentication
+### Phase 3: Client API (In Progress)
+- FastAPI + SQLAlchemy ✅
+- Database models (5 tables) ✅
+- Supabase PostgreSQL connected ✅
+- Test data seeded (4 debtors) ✅
+- CRUD endpoints (pending)
+- Authentication (pending)
 
 ### Phase 4: Call Scheduler (Not Started)
 - Cloud Pub/Sub integration
@@ -342,4 +356,4 @@ GREETING → VERIFICATION → PURPOSE → NEGOTIATION → COMMITMENT → CLOSING
 5. ~~Voice orchestration approach~~ → ElevenLabs Agents (not custom)
 6. ~~SMS approach~~ → Agent webhook tool (not separate service)
 
-**Voice + SMS configured. Next: Client API (Phase 3).**
+**Voice + SMS configured. Client API database ready (Supabase). Next: Implement CRUD endpoints.**

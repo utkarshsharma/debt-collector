@@ -1,13 +1,13 @@
 # Debt Collector Voice AI - Task Tracker
 
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-17
 
 ---
 
 ## Current Status
 
-**Phase**: Phase 2.5 (SMS Messaging) - Configured, Pending Verification
-**Next Action**: Verify SMS tool works during live call, then Phase 3 (Client API)
+**Phase**: Phase 3 (Client API) - Database Ready
+**Next Action**: Implement API endpoints, test with seeded data
 
 ---
 
@@ -63,10 +63,15 @@
 - [x] Add end_call built-in tool to agent
 - [x] Create add_sms_tool_to_agent.py setup script
 - [ ] Verify SMS tool works during live call (ElevenLabs simulation API unavailable)
+- [ ] Verify SMS tool via simulate-conversation (no phone call)
 
 ### Phase 3: Client API Service
-- [ ] Set up FastAPI project structure
-- [ ] Implement database models (SQLAlchemy)
+- [x] Set up FastAPI project structure
+- [x] Implement database models (SQLAlchemy)
+- [x] Migrate database to Supabase (PostgreSQL)
+- [x] Configure Alembic migrations for Supabase
+- [x] Create initial migration (5 tables)
+- [x] Seed database with test data (4 debtors)
 - [ ] Implement debtor CRUD endpoints
 - [ ] Implement campaign endpoints
 - [ ] Implement call history endpoints
@@ -108,12 +113,24 @@
 | ElevenLabs Agent | Voice AI (STT + LLM + TTS) | Working |
 | SMS Tool (Agent) | Post-call SMS via Twilio | Configured, pending verification |
 | twilio_sms module | SMS messaging (standalone) | Complete (19 tests) |
-| client-api | REST API for finance companies | Not started |
+| client-api | REST API for finance companies | Database ready (Supabase) |
 | call-scheduler | Background job processing | Not started |
 
 ---
 
 ## Session Log
+
+### 2026-01-17 (Session 4)
+- Migrated Client API database from local PostgreSQL to Supabase
+- Updated database.py with smart pool detection (NullPool for pooler, standard for direct)
+- Added connection verification on startup
+- Updated Alembic to load DATABASE_URL from environment
+- Created initial migration with 5 tables (clients, debtors, calls, payment_promises, sms_logs)
+- Fixed seed script to match current model schema
+- Seeded database with 4 test debtors (Utkarsh, Abhishek, Shreyan, Harsh)
+- Created test_supabase_connection.py verification script
+- Updated .mcp.json with Supabase project reference
+- Diagnosed IPv6 connectivity issue (VPN was blocking IPv6-only Supabase direct connection)
 
 ### 2026-01-15 (Session 3)
 - Implemented post-call SMS via ElevenLabs Agent webhook tool
